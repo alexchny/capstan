@@ -1,0 +1,17 @@
+pairs: [BTCUSDT, ETHUSDT, SOLUSDT, LINKUSDT]
+venues: [bybit, bitget, kucoin, gate, mexc, okx]
+position_caps:
+  per_pair_usd: 50000
+  per_venue_usd: 150000
+  global_usd: 400000
+hfh:
+  k_by_pair: {BTCUSDT: 0.7, ETHUSDT: 0.8, SOLUSDT: 1.0, LINKUSDT: 1.1}
+  vol_window_min: 120
+llca:
+  z_in: 2.0
+  z_out: 0.5
+  max_hold_sec: 480
+risk:
+  intraday_dd_pct: 0.8
+  venue_health_thresholds: {normal: 80, reduce: 60, block: 40}
+latency_penalty_lambda: 0.2 
