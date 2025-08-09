@@ -1,0 +1,42 @@
+bybit:
+  rest_base: https://api.bybit.com
+  ws_base: wss://stream.bybit.com
+  taker_fee_bps: 7.0
+  rate_limits:
+    rest_rps: 10
+    ws_subs: 50
+bitget:
+  rest_base: https://api.bitget.com
+  ws_base: wss://ws.bitget.com
+  taker_fee_bps: 8.0
+  rate_limits:
+    rest_rps: 10
+    ws_subs: 50
+kucoin:
+  rest_base: https://api.kucoin.com
+  ws_base: wss://ws-api.kucoin.com
+  taker_fee_bps: 10.0
+  rate_limits:
+    rest_rps: 10
+    ws_subs: 50
+gate:
+  rest_base: https://api.gateio.ws
+  ws_base: wss://ws.gateio.ws
+  taker_fee_bps: 10.0
+  rate_limits:
+    rest_rps: 10
+    ws_subs: 50
+mexc:
+  rest_base: https://api.mexc.com
+  ws_base: wss://wbs.mexc.com
+  taker_fee_bps: 10.0
+  rate_limits:
+    rest_rps: 10
+    ws_subs: 50
+okx:
+  rest_base: https://www.okx.com
+  ws_base: wss://ws.okx.com
+  taker_fee_bps: 8.0
+  rate_limits:
+    rest_rps: 10
+    ws_subs: 50 
