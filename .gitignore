@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.DS_Store
+.env
+.venv/
+.uv/
+uv.lock
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+build/
+.mypy_cache/
+.ruff_cache/ 
