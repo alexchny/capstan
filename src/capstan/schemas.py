@@ -1,72 +1,82 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
 
 
 class PriceLevel(BaseModel):
-    price: float
-    qty: float
+	model_config = ConfigDict(frozen=True)
+	price: float
+	qty: float
+
+	@field_validator("price")
+	@classmethod
+	def _positive_price(cls, v: float) -> float:
+		if v <= 0.0:
+			raise ValueError("price must be > 0")
+		return v
+
+	@field_validator("qty")
+	@classmethod
+	def _nonnegative_qty(cls, v: float) -> float:
+		if v < 0.0:
+			raise ValueError("qty must be >= 0")
+		return v
 
 
 class OrderBook(BaseModel):
-    ts: int
-    venue: str
-    symbol: str
-    bids: list[PriceLevel]
-    asks: list[PriceLevel]
-    seq: int
-    latency_ms: int
+	model_config = ConfigDict(frozen=True)
+	ts: int = Field(..., ge=0)
+	venue: str
+	symbol: str
+	bids: list[PriceLevel]
+	asks: list[PriceLevel]
+	seq: int = Field(..., ge=0)
 
 
-class Trade(BaseModel):
-    ts: int
-    venue: str
-    symbol: str
-    side: Literal["buy", "sell"]
-    price: float
-    qty: float
+class OpenInterest(BaseModel):
+	model_config = ConfigDict(frozen=True)
+	ts: int = Field(..., ge=0)
+	venue: str
+	symbol: str
+	open_interest: float
+
+	@field_validator("open_interest")
+	@classmethod
+	def _nonnegative_oi(cls, v: float) -> float:
+		if v < 0.0:
+			raise ValueError("open_interest must be >= 0")
+		return v
 
 
 class Funding(BaseModel):
-    ts: int
-    venue: str
-    symbol: str
-    next_ts: int
-    est_rate: float
-    term_structure: Mapping[int, float]
+	model_config = ConfigDict(frozen=True)
+	ts: int = Field(..., ge=0)
+	venue: str
+	symbol: str
+	next_ts: int = Field(..., ge=0)
+	est_rate: float
+	term_structure: Mapping[int, float] = Field(default_factory=dict)
+
+	@model_validator(mode="after")
+	def _check_next_after_ts(self) -> "Funding":
+		if self.next_ts < self.ts:
+			raise ValueError("next_ts must be >= ts")
+		return self
 
 
 class IndexMark(BaseModel):
-    ts: int
-    venue: str
-    symbol: str
-    index: float
-    mark: float
+	model_config = ConfigDict(frozen=True)
+	ts: int = Field(..., ge=0)
+	venue: str
+	symbol: str
+	index: float
+	mark: float
 
-
-class Position(BaseModel):
-    qty: float
-    entry_px: float
-    u_pnl: float
-
-
-class Account(BaseModel):
-    ts: int
-    venue: str
-    balances: dict[str, float]
-    positions: dict[str, Position]
-
-
-class VenueHealth(BaseModel):
-    ts: int
-    venue: str
-    rest_p95_ms: int
-    ws_gap_ms: int
-    error_rate: float
-    partial_fill_pct: float
-    cancel_rate: float
-    mark_drift_bps: float
-    status: Literal["OK", "DEGRADED", "BAD"] 
+	@field_validator("index", "mark")
+	@classmethod
+	def _positive_values(cls, v: float) -> float:
+		if v <= 0.0:
+			raise ValueError("value must be > 0")
+		return v
