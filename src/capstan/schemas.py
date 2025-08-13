@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class PriceLevel(BaseModel):
@@ -60,7 +60,7 @@ class Funding(BaseModel):
 	term_structure: Mapping[int, float] = Field(default_factory=dict)
 
 	@model_validator(mode="after")
-	def _check_next_after_ts(self) -> "Funding":
+	def _check_next_after_ts(self) -> Funding:
 		if self.next_ts < self.ts:
 			raise ValueError("next_ts must be >= ts")
 		return self

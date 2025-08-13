@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from typing import Iterator
+from collections.abc import Iterator
 
-from capstan.venue_adapters import VenueAdapter
 from capstan.schemas import Funding, IndexMark, OpenInterest, OrderBook
+from capstan.venue_adapters import VenueAdapter
 
 
 class Dummy(VenueAdapter):

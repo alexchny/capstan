@@ -3,12 +3,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from capstan.normalizer import normalize_funding, normalize_indexmark, normalize_oi, normalize_orderbook
-from capstan.venue_adapters import BitgetRO, BybitRO
+from capstan.normalizer import (
+	normalize_funding,
+	normalize_indexmark,
+	normalize_oi,
+	normalize_orderbook,
+)
 
 
 def test_bybit_e2e_orderbook() -> None:
-	adapter = BybitRO()
 	for raw in _iter_raw(Path("tests/fixtures/bybit/books.jsonl")):
 		ob = normalize_orderbook(raw)
 		assert ob.symbol == "BTCUSDT"
@@ -16,7 +19,6 @@ def test_bybit_e2e_orderbook() -> None:
 
 
 def test_bitget_e2e_orderbook() -> None:
-	adapter = BitgetRO()
 	for raw in _iter_raw(Path("tests/fixtures/bitget/books.jsonl")):
 		ob = normalize_orderbook(raw)
 		assert ob.symbol == "BTCUSDT"

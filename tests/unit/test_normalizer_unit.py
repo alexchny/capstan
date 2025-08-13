@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from capstan.normalizer import normalize_funding, normalize_indexmark, normalize_oi, normalize_orderbook
+from capstan.normalizer import (
+    normalize_funding,
+    normalize_indexmark,
+    normalize_oi,
+    normalize_orderbook,
+)
 from capstan.schemas import Funding, IndexMark, OpenInterest, OrderBook
 
 

@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any
 
+from capstan import metrics
 from capstan.schemas import Funding, IndexMark, OpenInterest, OrderBook
 
 
@@ -28,28 +30,39 @@ class FixtureRO(VenueAdapter):
 		self.logger = logging.getLogger(logger_name)
 
 	def books(self, symbol: str) -> Iterator[OrderBook]:
-		for rec in _iter_sorted_jsonl(self.root / "books.jsonl", self.logger):
+		prev = -1
+		stream = "books"
+		for rec in _iter_sorted_jsonl(self.root / "books.jsonl", self.logger, venue=self.venue_name(), stream=stream):
 			if rec.get("symbol") != symbol:
 				continue
+			if prev >= 0 and int(rec.get("ts", 0)) - prev > 200:
+				metrics.inc("gaps_detected_total", self.venue_name(), stream)
+			prev = int(rec.get("ts", 0))
 			yield OrderBook(**rec)
 
 	def oi(self, symbol: str) -> Iterator[OpenInterest]:
-		for rec in _iter_sorted_jsonl(self.root / "oi.jsonl", self.logger):
+		stream = "oi"
+		for rec in _iter_sorted_jsonl(self.root / "oi.jsonl", self.logger, venue=self.venue_name(), stream=stream):
 			if rec.get("symbol") != symbol:
 				continue
 			yield OpenInterest(**rec)
 
 	def funding(self, symbol: str) -> Iterator[Funding]:
-		for rec in _iter_sorted_jsonl(self.root / "funding.jsonl", self.logger):
+		stream = "funding"
+		for rec in _iter_sorted_jsonl(self.root / "funding.jsonl", self.logger, venue=self.venue_name(), stream=stream):
 			if rec.get("symbol") != symbol:
 				continue
 			yield Funding(**rec)
 
 	def indexmark(self, symbol: str) -> Iterator[IndexMark]:
-		for rec in _iter_sorted_jsonl(self.root / "index.jsonl", self.logger):
+		stream = "index"
+		for rec in _iter_sorted_jsonl(self.root / "index.jsonl", self.logger, venue=self.venue_name(), stream=stream):
 			if rec.get("symbol") != symbol:
 				continue
 			yield IndexMark(**rec)
+
+	def venue_name(self) -> str:
+		return self.logger.name.split(".")[-1]
 
 
 class BybitRO(FixtureRO):
@@ -62,7 +75,7 @@ class BitgetRO(FixtureRO):
 		super().__init__(root=root, logger_name="capstan.adapters.bitget")
 
 
-def _iter_sorted_jsonl(path: Path, logger: logging.Logger) -> Iterator[dict[str, Any]]:
+def _iter_sorted_jsonl(path: Path, logger: logging.Logger, *, venue: str, stream: str) -> Iterator[dict[str, Any]]:
 	if not path.exists():
 		return
 	records: list[dict[str, Any]] = []
@@ -77,8 +90,10 @@ def _iter_sorted_jsonl(path: Path, logger: logging.Logger) -> Iterator[dict[str,
 					raise ValueError("expected object")
 			except Exception as exc:
 				logger.warning("skip invalid jsonl at %s:%s: %s", path, line_no, exc)
+				metrics.inc("records_skipped_total", venue, stream)
 				continue
 			records.append(data)
 	records.sort(key=lambda r: int(r.get("ts", 0)))
 	for rec in records:
+		metrics.inc("records_read_total", venue, stream)
 		yield rec
