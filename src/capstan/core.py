@@ -148,3 +148,15 @@ def funding_nowcast(
 	if blend < -clamp_abs:
 		return -clamp_abs
 	return blend
+
+
+def half_life_pred(features: dict[str, float]) -> float:
+	z = abs(float(features.get("z", 0.0)))
+	depth = max(float(features.get("depth", 0.0)), 0.0)
+	health = float(features.get("health", 80.0))
+
+	health_low = 1.0 - max(0.0, min(health, 100.0)) / 100.0
+	depth_thin = 1.0 / (1.0 + depth)
+	base = 3.0
+	pred = base - 0.8 * min(z, 5.0) + 2.0 * health_low + 2.0 * depth_thin
+	return max(0.1, min(10.0, pred))
