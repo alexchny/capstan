@@ -113,3 +113,38 @@ def sweep_detector(
 	widened = curr_spread > prev_spread
 	widen_bps = (curr_spread - prev_spread) / prev_mid * 1e4 if widened else 0.0
 	return widened and widen_bps >= threshold_bps
+
+
+def oi_delta(prev_oi: float, curr_oi: float, dt_sec: float) -> tuple[float, float]:
+	delta = float(curr_oi) - float(prev_oi)
+	if dt_sec <= 0.0:
+		return delta, 0.0
+	return delta, delta / float(dt_sec)
+
+
+def funding_nowcast(
+	venue_est: float,
+	recent_realized: Sequence[float],
+	mark_spot_drift: float,
+	leader_momentum: float,
+	*,
+	w_est: float = 0.5,
+	w_realized: float = 0.2,
+	w_drift: float = 0.1,
+	w_momo: float = 0.2,
+	clamp_abs: float = 0.01,
+) -> float:
+	mean_realized = 0.0
+	if recent_realized:
+		mean_realized = sum(float(x) for x in recent_realized) / float(len(recent_realized))
+	blend = (
+		w_est * float(venue_est)
+		+ w_realized * mean_realized
+		+ w_drift * float(mark_spot_drift)
+		+ w_momo * float(leader_momentum)
+	)
+	if blend > clamp_abs:
+		return clamp_abs
+	if blend < -clamp_abs:
+		return -clamp_abs
+	return blend
