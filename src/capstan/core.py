@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import math
 from collections.abc import Sequence
+from statistics import pstdev
+
+from capstan.schemas import Funding, OrderBook
 
 
 def spread_z(price_a: float, price_b: float, sigma_spread: float) -> float:
@@ -73,9 +76,9 @@ def cancel_velocity(
 		if p_prev in curr_map:
 			q_curr = curr_map[p_prev]
 		else:
-			for p_curr, qc in curr_map.items():
+			for p_curr, qty_curr in curr_map.items():
 				if abs(p_curr - p_prev) <= price_tolerance:
-					q_curr = qc
+					q_curr = qty_curr
 					break
 		removed += max(q_prev - q_curr, 0.0)
 	vel = removed / prev_total
@@ -160,3 +163,75 @@ def half_life_pred(features: dict[str, float]) -> float:
 	base = 3.0
 	pred = base - 0.8 * min(z, 5.0) + 2.0 * health_low + 2.0 * depth_thin
 	return max(0.1, min(10.0, pred))
+
+
+def make_llca_features(
+	books_a: Sequence[OrderBook],
+	books_b: Sequence[OrderBook],
+	health_a: float,
+	health_b: float,
+) -> dict[str, float]:
+	if not books_a or not books_b:
+		return {"z": 0.0, "depth_ratio": 0.0, "imbalance": 0.0, "update_rate": 0.0, "health_min": min(health_a, health_b)}
+
+	def _mid(ob: OrderBook) -> float:
+		bid_price = ob.bids[0].price if ob.bids else 0.0
+		ask_price = ob.asks[0].price if ob.asks else 0.0
+		return 0.5 * (bid_price + ask_price) if (bid_price > 0.0 and ask_price > 0.0) else 0.0
+
+	spreads: list[float] = []
+	for ob_a, ob_b in zip(books_a, books_b, strict=False):
+		spreads.append(_mid(ob_a) - _mid(ob_b))
+	sigma = pstdev(spreads) if len(spreads) > 1 else 0.0
+	z = spread_z(_mid(books_a[-1]), _mid(books_b[-1]), sigma)
+
+	def _depth(ob: OrderBook) -> float:
+		bid_qty_sum = sum(level.qty for level in ob.bids[:10])
+		ask_qty_sum = sum(level.qty for level in ob.asks[:10])
+		return float(bid_qty_sum + ask_qty_sum)
+
+	depth_a = _depth(books_a[-1])
+	depth_b = _depth(books_b[-1])
+	depth_ratio = depth_a / depth_b if depth_b > 0.0 else 0.0
+
+	def _imb(ob: OrderBook) -> float:
+		b = [(level.price, level.qty) for level in ob.bids]
+		a = [(level.price, level.qty) for level in ob.asks]
+		return lob10_imbalance(b, a)
+
+	imbalance = 0.5 * (_imb(books_a[-1]) + _imb(books_b[-1]))
+
+	def _rate(books: Sequence[OrderBook]) -> float:
+		if len(books) < 2:
+			return 0.0
+		span_ms = max(1, books[-1].ts - books[0].ts)
+		return len(books) / (span_ms / 1000.0)
+
+	update_rate = 0.5 * (_rate(books_a) + _rate(books_b))
+	health_min = float(min(health_a, health_b))
+	return {
+		"z": float(z),
+		"depth_ratio": float(depth_ratio),
+		"imbalance": float(imbalance),
+		"update_rate": float(update_rate),
+		"health_min": health_min,
+	}
+
+
+def make_hfh_features(
+	funding_window: Sequence[Funding],
+	vol_est: float,
+	mark_spot_drift: float,
+) -> dict[str, float]:
+	venue_est = float(funding_window[-1].est_rate) if funding_window else 0.0
+	realized = [float(f.est_rate) for f in funding_window[-5:]] if funding_window else []
+	momo = 0.0
+	if funding_window and len(funding_window) >= 2:
+		momo = float(funding_window[-1].est_rate) - float(funding_window[0].est_rate)
+	E_funding_T = funding_nowcast(
+		venue_est=venue_est,
+		recent_realized=realized,
+		mark_spot_drift=mark_spot_drift,
+		leader_momentum=momo,
+	)
+	return {"E_funding_T": float(E_funding_T), "sigma_T": float(vol_est)}
