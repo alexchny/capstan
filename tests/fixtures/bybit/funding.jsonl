@@ -1,0 +1,2 @@
+{"ts": 1000, "venue": "bybit", "symbol": "BTCUSDT", "next_ts": 4600, "est_rate": 0.0001, "term_structure": {"3600": 0.00012}}
+{"ts": 2000, "venue": "bybit", "symbol": "BTCUSDT", "next_ts": 5600, "est_rate": 8e-05, "term_structure": {"3600": 0.0001}}
