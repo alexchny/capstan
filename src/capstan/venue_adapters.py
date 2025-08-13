@@ -22,10 +22,10 @@ class VenueAdapter:
 		raise NotImplementedError
 
 
-class BybitRO(VenueAdapter):
-	def __init__(self, root: Path | str = Path("tests/fixtures/bybit")) -> None:
+class FixtureRO(VenueAdapter):
+	def __init__(self, root: Path | str, logger_name: str) -> None:
 		self.root = Path(root)
-		self.logger = logging.getLogger("capstan.adapters.bybit")
+		self.logger = logging.getLogger(logger_name)
 
 	def books(self, symbol: str) -> Iterator[OrderBook]:
 		for rec in _iter_sorted_jsonl(self.root / "books.jsonl", self.logger):
@@ -50,6 +50,16 @@ class BybitRO(VenueAdapter):
 			if rec.get("symbol") != symbol:
 				continue
 			yield IndexMark(**rec)
+
+
+class BybitRO(FixtureRO):
+	def __init__(self, root: Path | str = Path("tests/fixtures/bybit")) -> None:
+		super().__init__(root=root, logger_name="capstan.adapters.bybit")
+
+
+class BitgetRO(FixtureRO):
+	def __init__(self, root: Path | str = Path("tests/fixtures/bitget")) -> None:
+		super().__init__(root=root, logger_name="capstan.adapters.bitget")
 
 
 def _iter_sorted_jsonl(path: Path, logger: logging.Logger) -> Iterator[dict[str, Any]]:
